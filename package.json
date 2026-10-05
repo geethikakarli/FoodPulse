@@ -1,0 +1,14 @@
+{
+  "name": "foodpulse-monorepo",
+  "version": "1.0.0",
+  "description": "FoodPulse - AI-Powered Food Redistribution Platform",
+  "scripts": {
+    "start": "concurrently -n \"FRONTEND,ML-SERVICE,BACKEND\" -c \"green,cyan,magenta\" \"npm --prefix frontend run dev\" \"cd ml-service && venv\\Scripts\\uvicorn.exe main:app --reload --port 8000\" \"cd backend && mvnw.cmd spring-boot:run\"",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:ml": "cd ml-service && venv\\Scripts\\uvicorn.exe main:app --reload --port 8000",
+    "dev:backend": "cd backend && mvnw.cmd spring-boot:run"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.4"
+  }
+}
