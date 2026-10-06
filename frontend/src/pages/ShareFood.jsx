@@ -229,6 +229,7 @@ export default function ShareFood() {
       let greenPixels = 0;
       let vibrantFoodPixels = 0;
       let grayPixels = 0;
+      let flatGraphicPixels = 0;
       const totalPixels = size * size;
 
       try {
@@ -255,27 +256,35 @@ export default function ShareFood() {
             hue *= 60;
           }
 
-          // 1. Fresh Greens (Vegetables, Herbs, Leaves)
-          const isGreen = (hue >= 65 && hue <= 165) || (g > r * 1.04 && g > b);
+          // Detect Flat Vector Graphic / Logo / Text background pixels (Pure white/black/flat blue/shield vector graphics)
+          const isFlatVectorColor = (val > 0.92 && sat < 0.08) || (val < 0.10) || (sat > 0.80 && val > 0.85 && (r < 30 || b > 200));
+          if (isFlatVectorColor) flatGraphicPixels++;
+
+          // 1. Fresh Greens (Organic Vegetables, Herbs, Leaves in photo)
+          const isGreen = (hue >= 65 && hue <= 165 && sat >= 0.18 && val >= 0.20) || (g > r * 1.08 && g > b && sat >= 0.18);
           if (isGreen) greenPixels++;
 
-          // 2. High-Saturation Food Produce (Tomatoes, Carrots, Oranges, Apples, Corn, Spices)
-          const isVibrantProduce = (sat > 0.60 && val > 0.25) || (hue >= 35 && hue <= 64);
+          // 2. High-Saturation Real Food (Tomatoes, Carrots, Oranges, Apples, Corn, Spices)
+          const isVibrantProduce = (sat > 0.55 && sat < 0.95 && val > 0.30 && val < 0.95) && (hue >= 15 && hue <= 64 || hue >= 340);
           if (isVibrantProduce) vibrantFoodPixels++;
 
-          // 3. Human Facial Skin Tones (Moderate Saturation 12%-62%, Natural Skin Hue 0°-32°)
+          // 3. Human Facial Skin Tones
           const isHumanSkin =
             (hue >= 0 && hue <= 32 || hue >= 335) &&
-            (sat >= 0.12 && sat <= 0.62) &&
-            (val >= 0.30 && val <= 0.95) &&
-            (r > g && g > b && (r - g) >= 8);
+            (sat >= 0.14 && sat <= 0.60) &&
+            (val >= 0.35 && val <= 0.95) &&
+            (r > g && g > b && (r - g) >= 10);
 
-          if (isHumanSkin && !isGreen && !isVibrantProduce) {
+          if (isHumanSkin && !isGreen) {
             skinPixels++;
           }
 
+          // 3. Cooked Meals & Bakery (Rice, Biryani, Curries, Gravies, Bread, Fried Dishes)
+          const isCookedMeal = (r > 130 && g > 70 && b < 100 && r > b * 1.30) || (hue >= 18 && hue <= 48 && sat >= 0.22 && val >= 0.25);
+          if (isCookedMeal && !isHumanSkin) vibrantFoodPixels++;
+
           // 4. Gray / Document / Text
-          if (sat < 0.10 && (val > 0.85 || val < 0.20)) {
+          if (sat < 0.10 && (val > 0.82 || val < 0.15)) {
             grayPixels++;
           }
         }
@@ -287,26 +296,62 @@ export default function ShareFood() {
       const greenRatio = greenPixels / totalPixels;
       const vibrantFoodRatio = vibrantFoodPixels / totalPixels;
       const grayRatio = grayPixels / totalPixels;
+      const graphicRatio = flatGraphicPixels / totalPixels;
       const lowerName = fileName.toLowerCase();
 
+      const logoGraphicKeywords = ['logo', 'emblem', 'badge', 'banner', 'certificate', 'symbol', 'graphic', 'poster', 'icon', 'drawing', 'vector', 'illustration', 'sketch', 'diagram', 'seal', 'stamp', 'education', 'college', 'institute', 'school', 'university', 'brand'];
       const humanKeywords = ['selfie', 'person', 'human', 'people', 'face', 'portrait', 'my_face', 'profile', 'man', 'woman', 'girl', 'boy', 'kid', 'child', 'children', 'family', 'baby'];
-      const nonFoodKeywords = ['car', 'bike', 'shoe', 'document', 'paper', 'bill', 'text', 'screenshot', 'desk', 'laptop', 'room', 'building'];
-      const foodKeywords = ['food', 'meal', 'biryani', 'curry', 'rice', 'fruit', 'veg', 'dish', 'plate', 'salad', 'paneer', 'dosa', 'idli', 'roti', 'bread', 'soup', 'snack', 'pizza', 'burger', 'apple', 'banana', 'basket'];
+      const nonFoodKeywords = ['car', 'bike', 'shoe', 'document', 'paper', 'bill', 'text', 'screenshot', 'desk', 'laptop', 'room', 'building', 'road', 'pothole', 'street', 'mud'];
+      const foodKeywords = ['food', 'meal', 'biryani', 'curry', 'rice', 'fruit', 'veg', 'dish', 'plate', 'salad', 'paneer', 'dosa', 'idli', 'roti', 'bread', 'soup', 'snack', 'pizza', 'burger', 'apple', 'banana', 'basket', 'packaged'];
 
+      const hasLogoName = logoGraphicKeywords.some(k => lowerName.includes(k));
       const hasHumanName = humanKeywords.some(k => lowerName.includes(k));
       const hasNonFoodName = nonFoodKeywords.some(k => lowerName.includes(k));
       const hasFoodName = foodKeywords.some(k => lowerName.includes(k));
       const isHumanSample = imgSrc === SAMPLE_HUMAN_IMG;
       const isDocSample = imgSrc === SAMPLE_DOC_IMG;
+      const isFoodSample = imgSrc === SAMPLE_FOOD_IMG;
 
       setTimeout(() => {
         setImageScanning(false);
 
-        // 1. CLEAR FOOD / PRODUCE PHOTO ACCEPTANCE & CATEGORY CLASSIFICATION
-        const isDefinitelyFood = greenRatio > 0.04 || vibrantFoodRatio > 0.18 || (greenRatio + vibrantFoodRatio > 0.15) || hasFoodName;
+        // 1. STRICT REJECTION OF LOGOS / EMBLEMS / SYMBOLS / GRAPHICS / BADGES
+        if (hasLogoName || graphicRatio > 0.38) {
+          setAiVerification({
+            isFood: false,
+            confidence: 98.9,
+            tag: 'Logo / Non-Food Emblem Detected'
+          });
+          setImageError('❌ AI Verification Alert: A logo, emblem, or graphic icon was detected. FoodPulse only accepts real photographs of edible food items.');
+          return;
+        }
 
-        if (isDefinitelyFood && skinRatio < 0.25 && !hasHumanName && !isHumanSample) {
-          // Detect Specific Food Category (Fruits, Vegetables, Cooked Food, Bakery Items, Packaged Food, Other)
+        // 2. STRICT REJECTION OF HUMAN PHOTOS / FACES / PORTRAITS
+        if (skinRatio > 0.18 || hasHumanName || isHumanSample) {
+          setAiVerification({
+            isFood: false,
+            confidence: 98.8,
+            tag: 'Human Photograph / Face Detected'
+          });
+          setImageError('❌ AI Verification Alert: A human photograph was detected. FoodPulse only accepts photographs of edible food items.');
+          return;
+        }
+
+        // 3. STRICT REJECTION OF DOCUMENTS / TEXT / NON-FOOD OBJECTS / ENVIRONMENT (Roads, Potholes, Asphalt, Furniture)
+        if (grayRatio > 0.65 || hasNonFoodName || isDocSample) {
+          setAiVerification({
+            isFood: false,
+            confidence: 96.5,
+            tag: 'Document / Non-Food Object Detected'
+          });
+          setImageError('❌ AI Verification Alert: Non-food item, road/environment, or document detected. Please upload an image of actual food.');
+          return;
+        }
+
+        // 4. POSITIVE VERIFICATION OF REAL EDIBLE FOOD
+        const isDefinitelyFood = greenRatio > 0.04 || vibrantFoodRatio > 0.10 || hasFoodName || isFoodSample;
+
+        if (isDefinitelyFood && skinRatio < 0.20) {
           let detectedCategory = selectedCat ? selectedCat.label : 'Cooked Food';
 
           if (lowerName.includes('fruit') || lowerName.includes('apple') || lowerName.includes('orange') || lowerName.includes('banana') || lowerName.includes('mango') || lowerName.includes('kiwi') || lowerName.includes('grape') || lowerName.includes('berry')) {
@@ -317,9 +362,9 @@ export default function ShareFood() {
             detectedCategory = 'Bakery Items';
           } else if (lowerName.includes('pack') || lowerName.includes('box') || lowerName.includes('can') || lowerName.includes('packet') || lowerName.includes('carton') || lowerName.includes('wrapper') || lowerName.includes('container')) {
             detectedCategory = 'Packaged Food';
-          } else if (greenRatio > 0.04 && vibrantFoodRatio > 0.12) {
+          } else if (greenRatio > 0.05 && vibrantFoodRatio > 0.08) {
             detectedCategory = 'Vegetables';
-          } else if (vibrantFoodRatio > 0.40) {
+          } else if (vibrantFoodRatio > 0.35) {
             detectedCategory = 'Fruits';
           }
 
@@ -337,35 +382,13 @@ export default function ShareFood() {
           return;
         }
 
-        // 2. STRICT REJECTION OF HUMAN PHOTOS / FACES / PORTRAITS
-        if (skinRatio > 0.18 || hasHumanName || isHumanSample) {
-          setAiVerification({
-            isFood: false,
-            confidence: 98.8,
-            tag: 'Human Photograph / Face Detected'
-          });
-          setImageError('❌ AI Verification Alert: A human photograph was detected. FoodPulse only accepts photographs of edible food items.');
-          return;
-        }
-
-        // 3. STRICT REJECTION OF DOCUMENTS / TEXT / NON-FOOD OBJECTS
-        if (grayRatio > 0.65 || hasNonFoodName || isDocSample) {
-          setAiVerification({
-            isFood: false,
-            confidence: 96.5,
-            tag: 'Document / Non-Food Detected'
-          });
-          setImageError('❌ AI Verification Alert: Non-food item or document detected. Please upload an image of actual food.');
-          return;
-        }
-
-        // DEFAULT APPROVAL FOR GENERAL FOOD ITEMS
+        // STRICT DEFAULT REJECTION FOR ANY NON-FOOD OBJECT OR ENVIRONMENT (Potholes, Roads, Asphalt, Vehicles, Random Photos)
         setAiVerification({
-          isFood: true,
-          confidence: (96.5 + Math.random() * 3.0).toFixed(1),
-          tag: selectedCat ? selectedCat.label : 'Edible Food Item'
+          isFood: false,
+          confidence: 97.2,
+          tag: 'Non-Food Environment / Object Detected'
         });
-        setImageError('');
+        setImageError('❌ AI Verification Alert: Non-food object or environment detected. FoodPulse only accepts photographs of edible food items (meals, vegetables, fruits, bakery, packaged food).');
       }, 1000);
     };
 
