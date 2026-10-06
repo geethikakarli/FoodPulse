@@ -316,7 +316,7 @@ export default function ShareFood() {
         setImageScanning(false);
 
         // 1. STRICT REJECTION OF LOGOS / EMBLEMS / SYMBOLS / GRAPHICS / BADGES
-        if (hasLogoName || graphicRatio > 0.38) {
+        if (hasLogoName || graphicRatio > 0.42) {
           setAiVerification({
             isFood: false,
             confidence: 98.9,
@@ -327,7 +327,7 @@ export default function ShareFood() {
         }
 
         // 2. STRICT REJECTION OF HUMAN PHOTOS / FACES / PORTRAITS
-        if (skinRatio > 0.18 || hasHumanName || isHumanSample) {
+        if (skinRatio > 0.22 || hasHumanName || isHumanSample) {
           setAiVerification({
             isFood: false,
             confidence: 98.8,
@@ -337,58 +337,45 @@ export default function ShareFood() {
           return;
         }
 
-        // 3. STRICT REJECTION OF DOCUMENTS / TEXT / NON-FOOD OBJECTS / ENVIRONMENT (Roads, Potholes, Asphalt, Furniture)
-        if (grayRatio > 0.65 || hasNonFoodName || isDocSample) {
+        // 3. STRICT REJECTION OF DOCUMENTS / TEXT SCREENSHOTS / EXPLICIT NON-FOOD OBJECTS (Roads, Potholes, Cars, Documents)
+        if (isDocSample || hasNonFoodName) {
           setAiVerification({
             isFood: false,
             confidence: 96.5,
             tag: 'Document / Non-Food Object Detected'
           });
-          setImageError('❌ AI Verification Alert: Non-food item, road/environment, or document detected. Please upload an image of actual food.');
+          setImageError('❌ AI Verification Alert: Non-food item, road/environment, or document detected. Please upload an image of actual edible food.');
           return;
         }
 
-        // 4. POSITIVE VERIFICATION OF REAL EDIBLE FOOD
-        const isDefinitelyFood = greenRatio > 0.04 || vibrantFoodRatio > 0.10 || hasFoodName || isFoodSample;
+        // 4. APPROVED AS VALID EDIBLE FOOD & CATEGORY CLASSIFICATION
+        let detectedCategory = selectedCat ? selectedCat.label : 'Cooked Food';
 
-        if (isDefinitelyFood && skinRatio < 0.20) {
-          let detectedCategory = selectedCat ? selectedCat.label : 'Cooked Food';
-
-          if (lowerName.includes('fruit') || lowerName.includes('apple') || lowerName.includes('orange') || lowerName.includes('banana') || lowerName.includes('mango') || lowerName.includes('kiwi') || lowerName.includes('grape') || lowerName.includes('berry')) {
-            detectedCategory = 'Fruits';
-          } else if (greenRatio > 0.08 || lowerName.includes('veg') || lowerName.includes('salad') || lowerName.includes('carrot') || lowerName.includes('tomato') || lowerName.includes('cabbage') || lowerName.includes('cucumber') || lowerName.includes('corn') || lowerName.includes('spinach') || lowerName.includes('basket')) {
-            detectedCategory = 'Vegetables';
-          } else if (lowerName.includes('bread') || lowerName.includes('bakery') || lowerName.includes('bun') || lowerName.includes('cake') || lowerName.includes('pastry') || lowerName.includes('cookie') || lowerName.includes('donut') || lowerName.includes('loaf')) {
-            detectedCategory = 'Bakery Items';
-          } else if (lowerName.includes('pack') || lowerName.includes('box') || lowerName.includes('can') || lowerName.includes('packet') || lowerName.includes('carton') || lowerName.includes('wrapper') || lowerName.includes('container')) {
-            detectedCategory = 'Packaged Food';
-          } else if (greenRatio > 0.05 && vibrantFoodRatio > 0.08) {
-            detectedCategory = 'Vegetables';
-          } else if (vibrantFoodRatio > 0.35) {
-            detectedCategory = 'Fruits';
-          }
-
-          const matchedCatObj = categories.find(c => c.label.toLowerCase().includes(detectedCategory.toLowerCase()) || detectedCategory.toLowerCase().includes(c.label.toLowerCase())) || categories[0];
-          if (!selectedCat) {
-            setSelectedCat(matchedCatObj);
-          }
-
-          setAiVerification({
-            isFood: true,
-            confidence: (96.8 + Math.random() * 2.8).toFixed(1),
-            tag: detectedCategory
-          });
-          setImageError('');
-          return;
+        if (lowerName.includes('fruit') || lowerName.includes('apple') || lowerName.includes('orange') || lowerName.includes('banana') || lowerName.includes('mango') || lowerName.includes('kiwi') || lowerName.includes('grape') || lowerName.includes('berry')) {
+          detectedCategory = 'Fruits';
+        } else if (greenRatio > 0.08 || lowerName.includes('veg') || lowerName.includes('salad') || lowerName.includes('carrot') || lowerName.includes('tomato') || lowerName.includes('cabbage') || lowerName.includes('cucumber') || lowerName.includes('corn') || lowerName.includes('spinach') || lowerName.includes('basket')) {
+          detectedCategory = 'Vegetables';
+        } else if (lowerName.includes('bread') || lowerName.includes('bakery') || lowerName.includes('bun') || lowerName.includes('cake') || lowerName.includes('pastry') || lowerName.includes('cookie') || lowerName.includes('donut') || lowerName.includes('loaf')) {
+          detectedCategory = 'Bakery Items';
+        } else if (lowerName.includes('pack') || lowerName.includes('box') || lowerName.includes('can') || lowerName.includes('packet') || lowerName.includes('carton') || lowerName.includes('wrapper') || lowerName.includes('container')) {
+          detectedCategory = 'Packaged Food';
+        } else if (greenRatio > 0.05 && vibrantFoodRatio > 0.08) {
+          detectedCategory = 'Vegetables';
+        } else if (vibrantFoodRatio > 0.35) {
+          detectedCategory = 'Fruits';
         }
 
-        // STRICT DEFAULT REJECTION FOR ANY NON-FOOD OBJECT OR ENVIRONMENT (Potholes, Roads, Asphalt, Vehicles, Random Photos)
+        const matchedCatObj = categories.find(c => c.label.toLowerCase().includes(detectedCategory.toLowerCase()) || detectedCategory.toLowerCase().includes(c.label.toLowerCase())) || categories[0];
+        if (!selectedCat) {
+          setSelectedCat(matchedCatObj);
+        }
+
         setAiVerification({
-          isFood: false,
-          confidence: 97.2,
-          tag: 'Non-Food Environment / Object Detected'
+          isFood: true,
+          confidence: (96.8 + Math.random() * 2.8).toFixed(1),
+          tag: detectedCategory
         });
-        setImageError('❌ AI Verification Alert: Non-food object or environment detected. FoodPulse only accepts photographs of edible food items (meals, vegetables, fruits, bakery, packaged food).');
+        setImageError('');
       }, 1000);
     };
 
