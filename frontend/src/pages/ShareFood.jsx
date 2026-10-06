@@ -299,9 +299,9 @@ export default function ShareFood() {
       const graphicRatio = flatGraphicPixels / totalPixels;
       const lowerName = fileName.toLowerCase();
 
-      const logoGraphicKeywords = ['logo', 'emblem', 'badge', 'banner', 'certificate', 'symbol', 'graphic', 'poster', 'icon', 'drawing', 'vector', 'illustration', 'sketch', 'diagram', 'seal', 'stamp', 'education', 'college', 'institute', 'school', 'university', 'brand'];
-      const humanKeywords = ['selfie', 'person', 'human', 'people', 'face', 'portrait', 'my_face', 'profile', 'man', 'woman', 'girl', 'boy', 'kid', 'child', 'children', 'family', 'baby'];
-      const nonFoodKeywords = ['car', 'bike', 'shoe', 'document', 'paper', 'bill', 'text', 'screenshot', 'desk', 'laptop', 'room', 'building', 'road', 'pothole', 'street', 'mud'];
+      const logoGraphicKeywords = ['logo_vector', 'emblem_badge', 'certificate_doc', 'symbol_graphic', 'vector_art'];
+      const humanKeywords = ['selfie', 'person_face', 'human_face', 'portrait_face', 'my_face'];
+      const nonFoodKeywords = ['car_vehicle', 'bike_vehicle', 'pothole_road', 'asphalt_street'];
       const foodKeywords = ['food', 'meal', 'biryani', 'curry', 'rice', 'fruit', 'veg', 'dish', 'plate', 'salad', 'paneer', 'dosa', 'idli', 'roti', 'bread', 'soup', 'snack', 'pizza', 'burger', 'apple', 'banana', 'basket', 'packaged'];
 
       const hasLogoName = logoGraphicKeywords.some(k => lowerName.includes(k));
